@@ -24,7 +24,6 @@ private:
     ros::Subscriber waypoint_sub_; 
 
 
-
     double robot_x_, robot_y_;
     geometry_msgs::Quaternion robot_r_;
     geometry_msgs::Twist twist_;
@@ -32,8 +31,11 @@ private:
     ros::Time start_time_;
     std::vector<geometry_msgs::PoseStamped> waypoints_; // ウェイポイントのベクター
     geometry_msgs::PoseStamped goal_; // 現在の目標位置
-    //std_msgs::Bool goal_reached_;
+    std_msgs::Bool goal_reached_msg;
+
     bool goal_reached_; 
+    bool goal_reached_callback_;
+    int near_position_flag = 0;
 
     
     int i = 0; // ウェイポイントインデックス
@@ -67,7 +69,7 @@ public:
     void spin() {
         while (ros::ok()) {
             ros::Time now = ros::Time::now();   
-            if (now - start_time_ < ros::Duration(10.0)) {
+            if (now - start_time_ < ros::Duration(5.0)) {
                 continue;
             }
 
@@ -81,20 +83,38 @@ public:
 
             // 目標位置に近づいているか確認
             if (nearPosition(goal_)) {
+                if(goal_reached_callback_ == true){
+                    continue;
+                }
                 twist_.linear.x = 0.0;
                 twist_.angular.z = 0.0;
-
                 // goal_reached をパブリッシュ
                 // std_msgs::Bool goal_reached_;
-                std_msgs::Bool goal_reached_msg;
+                // std_msgs::Bool goal_reached_msg;
                 goal_reached_msg.data = true;
                 goal_reached_pub_.publish(goal_reached_msg);
-                std::cout << "goal_reached" << goal_reached_msg.data << std::endl;
+                
+                // std::cout << "goal_reached" << std::endl;
+                // std::cout << "goal_reached" << goal_reached_msg.data << std::endl;
+
+
+                // if(near_position_flag == 0){
+                //     publishGoalFlag();
+                // }
+                // if(goal_reached_sub_ == false)
+                // near_position_flag = 1;
+
 
                 // 次のウェイポイントに進む
-                if (i < waypoints_.size() - 1) {
-                    goal_ = waypoints_[++i];
-                }
+                // if (i < waypoints_.size() - 1) {
+                //     goal_ = waypoints_[++i];
+                // }
+            }
+            else{
+                goal_reached_msg.data = goal_reached_;
+                // goal_reached_msg.data = false;
+                near_position_flag = 0;
+
             }
 
             twist_pub_.publish(twist_);
@@ -105,7 +125,7 @@ public:
 private:
 
     void goalReachedCallback(const std_msgs::Bool::ConstPtr& msg) {
-        goal_reached_ = msg->data; // サブスクライブした値でgoal_reached_を更新
+        goal_reached_callback_ = msg->data; // サブスクライブした値でgoal_reached_を更新
         // ROS_INFO("goal_reached_ = %s", goal_reached_ ? "true" : "false");
     }
 
@@ -122,6 +142,7 @@ private:
         // サブスクライブしたウェイポイントを処理
         // 例えば次の目標に設定する
         goal_ = *msg;
+        std::cout << "goal_" << goal_ << std::endl;
     }
 
 
@@ -131,6 +152,11 @@ private:
 
     void scanCallback(const sensor_msgs::LaserScan::ConstPtr &scan_) {
         // スキャンデータのコールバック処理
+    }
+
+    void publishGoalFlag(){
+        goal_reached_msg.data = true;
+        goal_reached_pub_.publish(goal_reached_msg);
     }
 
     void goToPosition(const geometry_msgs::PoseStamped& goal) {
