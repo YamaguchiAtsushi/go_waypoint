@@ -121,6 +121,12 @@ target_link_libraries(go_waypoint
   ${catkin_LIBRARIES}
 )
 
+add_executable(go_straight src/go_straight.cpp)
+
+target_link_libraries(go_straight
+  ${catkin_LIBRARIES}
+)
+
 
 ###########
 ## Build ##
