@@ -85,6 +85,7 @@ public:
             // ウェイポイントをRvizに表示
             publishWaypointsMarker();
 
+            ROS_INFO("GOAL POSI, (%lf, %lf)", goal_.pose.position.x, goal_.pose.position.y);
             // 目標位置に移動
             go_position(goal_);
 
