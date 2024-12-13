@@ -182,7 +182,9 @@ private:
         double v = 1.0;
         double w = 0.0;
 
-        double theta = atan2(goal.pose.position.y - robot_odom_y_, goal.pose.position.x - robot_odom_x_);
+        // double theta = atan2(goal.pose.position.y - robot_odom_y_, goal.pose.position.x - robot_odom_x_);
+        double theta = atan2(goal.pose.position.y - robot_y_, goal.pose.position.x - robot_x_);
+
         while (theta <= -M_PI || M_PI <= theta) {
             if (theta <= -M_PI)
                 theta += 2 * M_PI;
@@ -212,9 +214,13 @@ private:
         w = k_w * theta;
 
         if (theta <= M_PI / 2 && theta >= -M_PI / 2) {
-            v = k_v * ((goal_.pose.position.x - robot_odom_x_) * (goal_.pose.position.x - robot_odom_x_) + (goal_.pose.position.y - robot_odom_y_) * (goal_.pose.position.y - robot_odom_y_));
+            // v = k_v * ((goal_.pose.position.x - robot_odom_x_) * (goal_.pose.position.x - robot_odom_x_) + (goal_.pose.position.y - robot_odom_y_) * (goal_.pose.position.y - robot_odom_y_));
+            v = k_v * ((goal_.pose.position.x - robot_x_) * (goal_.pose.position.x - robot_x_) + (goal_.pose.position.y - robot_y_) * (goal_.pose.position.y - robot_y_));
+
         } else {
-            v = -k_v * ((goal_.pose.position.x - robot_odom_x_) * (goal_.pose.position.x - robot_odom_x_) + (goal_.pose.position.y - robot_odom_y_) * (goal_.pose.position.y - robot_odom_y_));
+            // v = -k_v * ((goal_.pose.position.x - robot_odom_x_) * (goal_.pose.position.x - robot_odom_x_) + (goal_.pose.position.y - robot_odom_y_) * (goal_.pose.position.y - robot_odom_y_));
+            v = -k_v * ((goal_.pose.position.x - robot_x_) * (goal_.pose.position.x - robot_x_) + (goal_.pose.position.y - robot_y_) * (goal_.pose.position.y - robot_y_));
+
         }
 
         // twist_.linear.x = v;
@@ -223,10 +229,10 @@ private:
     }
 
     bool near_position(const geometry_msgs::PoseStamped& goal_) {
-        // double difx = robot_x_ - goal_.pose.position.x;
-        // double dify = robot_y_ - goal_.pose.position.y;
-        double difx = robot_odom_x_ - goal_.pose.position.x;
-        double dify = robot_odom_y_ - goal_.pose.position.y;
+        double difx = robot_x_ - goal_.pose.position.x;
+        double dify = robot_y_ - goal_.pose.position.y;
+        // double difx = robot_odom_x_ - goal_.pose.position.x;
+        // double dify = robot_odom_y_ - goal_.pose.position.y;
         return (sqrt(difx * difx + dify * dify) < 0.2);
     }
 
