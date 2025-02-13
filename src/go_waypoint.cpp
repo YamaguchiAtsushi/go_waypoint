@@ -12,14 +12,17 @@
 #include <vector>
 #include <cmath>
 
+#define PI 3.141592653589793
+#define CIRCLE_POINTS 100  // 円を構成する点の数
+
 class GoWaypoint {
 private:
     ros::NodeHandle nh_;  // NodeHandleをプライベートメンバとして追加
+    ros::Publisher marker_pub_;
     ros::Subscriber odom_sub_;
     ros::Publisher twist_pub_;
     ros::Subscriber scan_sub_;
     ros::Subscriber amcl_sub_;
-    ros::Publisher marker_pub_;
     ros::Publisher goal_reached_pub_;
     ros::Subscriber goal_reached_sub_; 
     ros::Subscriber waypoint_sub_; 
@@ -47,10 +50,11 @@ private:
 public:
     GoWaypoint() : nh_(), loop_rate_(100) {
         odom_sub_ = nh_.subscribe("ypspur_ros/odom", 1000, &GoWaypoint::odomCallback, this);
+        marker_pub_ = nh_.advertise<visualization_msgs::Marker>("waypoint_marker", 1);
         twist_pub_ = nh_.advertise<geometry_msgs::Twist>("ypspur_ros/cmd_vel", 1000);
         scan_sub_ = nh_.subscribe("/scan", 10, &GoWaypoint::scanCallback, this);
         amcl_sub_ = nh_.subscribe("/amcl_pose", 1000, &GoWaypoint::amclPoseCallback, this);
-        marker_pub_ = nh_.advertise<visualization_msgs::Marker>("visualization_marker", 1);
+        // marker_pub_ = nh_.advertise<visualization_msgs::Marker>("visualization_marker", 1);
         goal_reached_pub_ = nh_.advertise<std_msgs::Bool>("goal_reached", 10);
         goal_reached_sub_ = nh_.subscribe("goal_reached", 1000, &GoWaypoint::goalReachedCallback, this);
         waypoint_sub_ = nh_.subscribe("waypoint", 1000, &GoWaypoint::waypointCallback, this);
@@ -85,7 +89,7 @@ public:
             // ウェイポイントをRvizに表示
             publishWaypointsMarker();
 
-            ROS_INFO("GOAL POSI, (%lf, %lf)", goal_.pose.position.x, goal_.pose.position.y);
+            // ROS_INFO("GOAL POSI, (%lf, %lf)", goal_.pose.position.x, goal_.pose.position.y);
             // 目標位置に移動
             go_position(goal_);
 
@@ -94,7 +98,7 @@ public:
                 if(goal_reached_ == true){
                     continue;
                 }
-                twist_.linear.x = 0.0;
+                twist_.linear.x = 0.1;
                 twist_.angular.z = 0.0;
                 // goal_reached をパブリッシュ
                 // std_msgs::Bool goal_reached_;
@@ -125,12 +129,49 @@ public:
 
             }
 
+            visualize_waypoint();
+
             twist_pub_.publish(twist_);
             loop_rate_.sleep();
         }
     }
 
 private:
+    void visualize_waypoint(){
+        visualization_msgs::Marker circle_marker;
+        circle_marker.header.frame_id = "map";  // 基準座標系
+        circle_marker.header.stamp = ros::Time::now();
+        circle_marker.ns = "circle";
+        circle_marker.id = 0;
+        circle_marker.type = visualization_msgs::Marker::LINE_STRIP;
+        circle_marker.action = visualization_msgs::Marker::ADD;
+
+        // 色設定 (青, 透明度 80%)
+        circle_marker.color.r = 0.0;
+        circle_marker.color.g = 0.0;
+        circle_marker.color.b = 1.0;
+        circle_marker.color.a = 0.8;
+
+        // 線の太さ
+        circle_marker.scale.x = 0.05;
+
+        // 円の中心位置
+        double center_x = goal_.pose.position.x;
+        double center_y = goal_.pose.position.y;
+        double radius = 0.2;  // 半径1m
+
+        // 円を構成する点を追加
+        for (int i = 0; i <= CIRCLE_POINTS; i++) {
+            double angle = 2.0 * PI * i / CIRCLE_POINTS;
+            geometry_msgs::Point p;
+            p.x = center_x + radius * cos(angle);
+            p.y = center_y + radius * sin(angle);
+            p.z = 0.0;  // 平面上に配置
+            circle_marker.points.push_back(p);
+        }
+
+        marker_pub_.publish(circle_marker);
+    }
 
     void speedCallback(const std_msgs::Float32::ConstPtr& msg)
     {
@@ -214,17 +255,17 @@ private:
         w = k_w * theta;
 
         if (theta <= M_PI / 2 && theta >= -M_PI / 2) {
-            // v = k_v * ((goal_.pose.position.x - robot_odom_x_) * (goal_.pose.position.x - robot_odom_x_) + (goal_.pose.position.y - robot_odom_y_) * (goal_.pose.position.y - robot_odom_y_));
-            v = k_v * ((goal_.pose.position.x - robot_x_) * (goal_.pose.position.x - robot_x_) + (goal_.pose.position.y - robot_y_) * (goal_.pose.position.y - robot_y_));
+            v = 1.0;
+            // v = k_v * ((goal_.pose.position.x - robot_x_) * (goal_.pose.position.x - robot_x_) + (goal_.pose.position.y - robot_y_) * (goal_.pose.position.y - robot_y_));
 
         } else {
-            // v = -k_v * ((goal_.pose.position.x - robot_odom_x_) * (goal_.pose.position.x - robot_odom_x_) + (goal_.pose.position.y - robot_odom_y_) * (goal_.pose.position.y - robot_odom_y_));
-            v = -k_v * ((goal_.pose.position.x - robot_x_) * (goal_.pose.position.x - robot_x_) + (goal_.pose.position.y - robot_y_) * (goal_.pose.position.y - robot_y_));
+            v = 1.0;
+            // v = -k_v * ((goal_.pose.position.x - robot_x_) * (goal_.pose.position.x - robot_x_) + (goal_.pose.position.y - robot_y_) * (goal_.pose.position.y - robot_y_));
 
         }
 
         // twist_.linear.x = v;
-        twist_.linear.x = v * robot_speed_;
+        twist_.linear.x = v * robot_speed_;//vをPIDするとvの値が1を超えるため,robot_speed_をかけても速度はあまり変化しない
         twist_.angular.z = w * robot_speed_;
     }
 
